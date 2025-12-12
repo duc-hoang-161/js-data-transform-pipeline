@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Data Transform Pipeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #48bb78;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .transformation {
+            background: #f7fafc;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .transformation:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .transformation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .transformation-type {
+            display: flex;
+            gap: 10px;
+        }
+
+        .transformation-type select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+        }
+
+        .transformation-type select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-remove {
+            background: #f56565;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-remove:hover {
+            background: #e53e3e;
+        }
+
+        .code-editor {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            resize: vertical;
+        }
+
+        .code-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .preview-section {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .preview-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .preview-content {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .error {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .output-section {
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 40px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .copy-btn.copied {
+            background: #48bb78;
+        }
+
+        .examples {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .examples-title {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .example-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .example-btn {
+            padding: 8px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .example-btn:hover {
+            border-color: #667eea;
+            background: #f0f4f8;
+        }
+
+        .flow-indicator {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔄 JS Data Transform Pipeline</h1>
+            <p class="subtitle">Visualize and transform JSON data with custom JavaScript</p>
+        </header>
+
+        <div class="examples">
+            <div class="examples-title">📋 Quick Examples</div>
+            <div class="example-buttons">
+                <button class="example-btn" onclick="loadExample('simple')">Simple Map</button>
+                <button class="example-btn" onclick="loadExample('filter')">Filter & Map</button>
+                <button class="example-btn" onclick="loadExample('reduce')">Reduce Sum</button>
+                <button class="example-btn" onclick="loadExample('complex')">Complex Chain</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📥 Input Data <span class="badge">JSON Array</span></div>
+            <textarea id="inputData" rows="8" placeholder='Enter JSON array, e.g., [{"name": "Alice", "age": 25}, {"name": "Bob", "age": 30}]'></textarea>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚙️ Transformations</div>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="addTransformation()">➕ Add Transformation</button>
+                <button class="btn btn-secondary" onclick="executeTransformation()">▶️ Execute</button>
+                <button class="btn btn-danger" onclick="resetAll()">🔄 Reset All</button>
+                <div class="toggle-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="liveMode" onchange="handleLiveModeToggle()">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="liveMode" style="cursor: pointer; font-weight: 500;">Live Mode</label>
+                </div>
+            </div>
+            <div id="pipeline" class="pipeline"></div>
+        </div>
+
+        <div class="section output-section">
+            <div class="section-title">📤 Output <span class="badge">Formatted JSON</span></div>
+            <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy</button>
+            <textarea id="outputData" rows="12" readonly></textarea>
+            <div id="errorDisplay"></div>
+        </div>
+    </div>
+
+    <script>
+        let transformations = [];
+        let liveMode = false;
+
+        // Initialize with one transformation
+        window.addEventListener('DOMContentLoaded', () => {
+            addTransformation();
+            loadExample('simple');
+        });
+
+        function addTransformation() {
+            const id = Date.now();
+            const transformation = {
+                id,
+                type: 'map',
+                code: 'return item;'
+            };
+            transformations.push(transformation);
+            renderTransformations();
+        }
+
+        function removeTransformation(id) {
+            transformations = transformations.filter(t => t.id !== id);
+            renderTransformations();
+            if (liveMode) executeTransformation();
+        }
+
+        function updateTransformationType(id, type) {
+            const transformation = transformations.find(t => t.id === id);
+            if (transformation) {
+                transformation.type = type;
+                
+                // Update placeholder code based on type
+                const codeTextarea = document.querySelector(`#code-${id}`);
+                if (codeTextarea) {
+                    switch(type) {
+                        case 'map':
+                            transformation.code = 'return item;';
+                            break;
+                        case 'filter':
+                            transformation.code = 'return true;';
+                            break;
+                        case 'reduce':
+                            transformation.code = 'return acc;';
+                            break;
+                        case 'forEach':
+                            transformation.code = '// Perform side effects';
+                            break;
+                        case 'flatMap':
+                            transformation.code = 'return [item];';
+                            break;
+                        case 'custom':
+                            transformation.code = 'return data;';
+                            break;
+                    }
+                    codeTextarea.value = transformation.code;
+                }
+                
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function updateTransformationCode(id, code) {
+            const transformation = transformations.find(t => t.id === id);
+            if (transformation) {
+                transformation.code = code;
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function renderTransformations() {
+            const pipeline = document.getElementById('pipeline');
+            pipeline.innerHTML = '';
+
+            transformations.forEach((t, index) => {
+                const div = document.createElement('div');
+                div.className = 'transformation';
+                
+                const placeholder = getPlaceholder(t.type);
+                const paramInfo = getParameterInfo(t.type);
+                
+                div.innerHTML = `
+                    <div class="transformation-header">
+                        <div class="transformation-type">
+                            <strong>Step ${index + 1}:</strong>
+                            <select onchange="updateTransformationType(${t.id}, this.value)">
+                                <option value="map" ${t.type === 'map' ? 'selected' : ''}>map</option>
+                                <option value="filter" ${t.type === 'filter' ? 'selected' : ''}>filter</option>
+                                <option value="reduce" ${t.type === 'reduce' ? 'selected' : ''}>reduce</option>
+                                <option value="forEach" ${t.type === 'forEach' ? 'selected' : ''}>forEach</option>
+                                <option value="flatMap" ${t.type === 'flatMap' ? 'selected' : ''}>flatMap</option>
+                                <option value="custom" ${t.type === 'custom' ? 'selected' : ''}>custom</option>
+                            </select>
+                        </div>
+                        <button class="btn-remove" onclick="removeTransformation(${t.id})">✕ Remove</button>
+                    </div>
+                    <div style="margin-bottom: 8px; font-size: 13px; color: #666;">${paramInfo}</div>
+                    <textarea class="code-editor" id="code-${t.id}" 
+                        placeholder="${placeholder}"
+                        oninput="updateTransformationCode(${t.id}, this.value)">${t.code}</textarea>
+                `;
+                
+                pipeline.appendChild(div);
+                
+                if (index < transformations.length - 1) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'flow-indicator';
+                    indicator.textContent = '⬇';
+                    pipeline.appendChild(indicator);
+                }
+            });
+        }
+
+        function getPlaceholder(type) {
+            const placeholders = {
+                map: 'return { ...item, newField: item.oldField };',
+                filter: 'return item.value > 10;',
+                reduce: 'return acc + item.value;',
+                forEach: 'console.log(item);',
+                flatMap: 'return [item, item];',
+                custom: 'return data.slice(0, 5);'
+            };
+            return placeholders[type] || '';
+        }
+
+        function getParameterInfo(type) {
+            const info = {
+                map: 'Parameters: (item, index, array) => newItem',
+                filter: 'Parameters: (item, index, array) => boolean',
+                reduce: 'Parameters: (accumulator, item, index, array) => accumulator',
+                forEach: 'Parameters: (item, index, array) => void',
+                flatMap: 'Parameters: (item, index, array) => array',
+                custom: 'Parameters: (data) => transformed data (full array access)'
+            };
+            return info[type] || '';
+        }
+
+        function executeTransformation() {
+            const errorDisplay = document.getElementById('errorDisplay');
+            const outputData = document.getElementById('outputData');
+            errorDisplay.innerHTML = '';
+
+            try {
+                // Parse input data
+                const inputText = document.getElementById('inputData').value.trim();
+                if (!inputText) {
+                    throw new Error('Input data is empty');
+                }
+
+                let data = JSON.parse(inputText);
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Input must be a JSON array');
+                }
+
+                // Apply transformations
+                transformations.forEach((t, index) => {
+                    try {
+                        switch(t.type) {
+                            case 'map':
+                                const mapFn = new Function('item', 'index', 'array', t.code);
+                                data = data.map(mapFn);
+                                break;
+                            case 'filter':
+                                const filterFn = new Function('item', 'index', 'array', t.code);
+                                data = data.filter(filterFn);
+                                break;
+                            case 'reduce':
+                                const reduceFn = new Function('acc', 'item', 'index', 'array', t.code);
+                                data = data.reduce(reduceFn, Array.isArray(data[0]) ? [] : {});
+                                break;
+                            case 'forEach':
+                                const forEachFn = new Function('item', 'index', 'array', t.code);
+                                data.forEach(forEachFn);
+                                break;
+                            case 'flatMap':
+                                const flatMapFn = new Function('item', 'index', 'array', t.code);
+                                data = data.flatMap(flatMapFn);
+                                break;
+                            case 'custom':
+                                const customFn = new Function('data', t.code);
+                                data = customFn(data);
+                                break;
+                        }
+                    } catch (err) {
+                        throw new Error(`Error in Step ${index + 1} (${t.type}): ${err.message}`);
+                    }
+                });
+
+                // Format and display output
+                outputData.value = JSON.stringify(data, null, 2);
+            } catch (error) {
+                errorDisplay.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+                outputData.value = '';
+            }
+        }
+
+        function handleLiveModeToggle() {
+            liveMode = document.getElementById('liveMode').checked;
+            if (liveMode) {
+                executeTransformation();
+            }
+        }
+
+        function copyToClipboard() {
+            const outputData = document.getElementById('outputData');
+            outputData.select();
+            document.execCommand('copy');
+            
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.textContent = '✓ Copied!';
+            copyBtn.classList.add('copied');
+            
+            setTimeout(() => {
+                copyBtn.textContent = '📋 Copy';
+                copyBtn.classList.remove('copied');
+            }, 2000);
+        }
+
+        function resetAll() {
+            transformations = [];
+            document.getElementById('inputData').value = '';
+            document.getElementById('outputData').value = '';
+            document.getElementById('errorDisplay').innerHTML = '';
+            document.getElementById('liveMode').checked = false;
+            liveMode = false;
+            addTransformation();
+        }
+
+        function loadExample(type) {
+            switch(type) {
+                case 'simple':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {name: "Alice", age: 25},
+                        {name: "Bob", age: 30},
+                        {name: "Charlie", age: 35}
+                    ], null, 2);
+                    transformations = [{
+                        id: Date.now(),
+                        type: 'map',
+                        code: 'return { ...item, isAdult: item.age >= 18 };'
+                    }];
+                    break;
+                    
+                case 'filter':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {name: "Alice", age: 25, city: "NYC"},
+                        {name: "Bob", age: 17, city: "LA"},
+                        {name: "Charlie", age: 35, city: "NYC"}
+                    ], null, 2);
+                    transformations = [
+                        {
+                            id: Date.now(),
+                            type: 'filter',
+                            code: 'return item.age >= 18;'
+                        },
+                        {
+                            id: Date.now() + 1,
+                            type: 'map',
+                            code: 'return { name: item.name, city: item.city };'
+                        }
+                    ];
+                    break;
+                    
+                case 'reduce':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {product: "Apple", price: 1.5, quantity: 3},
+                        {product: "Banana", price: 0.8, quantity: 5},
+                        {product: "Orange", price: 2.0, quantity: 2}
+                    ], null, 2);
+                    transformations = [{
+                        id: Date.now(),
+                        type: 'reduce',
+                        code: 'return acc + (item.price * item.quantity);'
+                    }];
+                    break;
+                    
+                case 'complex':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {name: "Alice", scores: [85, 90, 92]},
+                        {name: "Bob", scores: [78, 82, 88]},
+                        {name: "Charlie", scores: [95, 93, 97]}
+                    ], null, 2);
+                    transformations = [
+                        {
+                            id: Date.now(),
+                            type: 'map',
+                            code: 'const avg = item.scores.reduce((a, b) => a + b, 0) / item.scores.length;\nreturn { ...item, average: avg };'
+                        },
+                        {
+                            id: Date.now() + 1,
+                            type: 'filter',
+                            code: 'return item.average >= 85;'
+                        },
+                        {
+                            id: Date.now() + 2,
+                            type: 'map',
+                            code: 'return { name: item.name, average: item.average.toFixed(2), grade: item.average >= 90 ? "A" : "B" };'
+                        }
+                    ];
+                    break;
+            }
+            
+            renderTransformations();
+            if (liveMode) {
+                executeTransformation();
+            }
+        }
+
+        // Add input listener for live mode
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('inputData').addEventListener('input', () => {
+                if (liveMode) executeTransformation();
+            });
+        });
+    </script>
+</body>
+</html>
