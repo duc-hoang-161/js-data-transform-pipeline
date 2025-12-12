@@ -443,10 +443,16 @@
         let transformations = [];
         let liveMode = false;
 
-        // Initialize with one transformation
+        // Initialize application
         window.addEventListener('DOMContentLoaded', () => {
+            // Add one initial transformation
             addTransformation();
             loadExample('simple');
+            
+            // Add input listener for live mode
+            document.getElementById('inputData').addEventListener('input', () => {
+                if (liveMode) executeTransformation();
+            });
         });
 
         function addTransformation() {
@@ -609,7 +615,13 @@
                                 break;
                             case 'reduce':
                                 const reduceFn = new Function('acc', 'item', 'index', 'array', t.code);
-                                data = data.reduce(reduceFn, Array.isArray(data[0]) ? [] : {});
+                                // Provide initial value for reduce - default to 0 (most common for sum/count)
+                                // Users can modify the code to use a different initial value if needed
+                                if (data.length === 0) {
+                                    data = 0;
+                                } else {
+                                    data = data.reduce(reduceFn, 0);
+                                }
                                 break;
                             case 'forEach':
                                 const forEachFn = new Function('item', 'index', 'array', t.code);
@@ -644,19 +656,33 @@
             }
         }
 
-        function copyToClipboard() {
+        async function copyToClipboard() {
             const outputData = document.getElementById('outputData');
-            outputData.select();
-            document.execCommand('copy');
-            
             const copyBtn = document.getElementById('copyBtn');
-            copyBtn.textContent = '✓ Copied!';
-            copyBtn.classList.add('copied');
             
-            setTimeout(() => {
-                copyBtn.textContent = '📋 Copy';
-                copyBtn.classList.remove('copied');
-            }, 2000);
+            try {
+                // Use modern Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(outputData.value);
+                } else {
+                    // Fallback for older browsers
+                    outputData.select();
+                    document.execCommand('copy');
+                }
+                
+                copyBtn.textContent = '✓ Copied!';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                copyBtn.textContent = '❌ Failed';
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                }, 2000);
+            }
         }
 
         function resetAll() {
@@ -748,13 +774,6 @@
                 executeTransformation();
             }
         }
-
-        // Add input listener for live mode
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('inputData').addEventListener('input', () => {
-                if (liveMode) executeTransformation();
-            });
-        });
     </script>
 </body>
 </html>
