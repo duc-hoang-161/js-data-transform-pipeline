@@ -430,7 +430,7 @@
                 <button class="btn btn-secondary" onclick="executeTransformation()">▶️ Execute</button>
                 <button class="btn btn-danger" onclick="resetAll()">🔄 Reset All</button>
                 <button class="btn btn-primary" onclick="exportPipeline()">💾 Export Pipeline</button>
-                <button class="btn btn-primary" onclick="document.getElementById('importFile').click()" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('importFile').click(); }">📂 Import Pipeline</button>
+                <button class="btn btn-primary" onclick="document.getElementById('importFile').click()" onkeydown="if(event.key === 'Enter' || event.key === 'Space') { event.preventDefault(); document.getElementById('importFile').click(); }">📂 Import Pipeline</button>
                 <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importPipeline(event)">
                 <div class="toggle-switch">
                     <label class="switch">
@@ -454,6 +454,7 @@
     <script>
         let transformations = [];
         let liveMode = false;
+        let successMessageTimeout = null;
 
         // Initialize application
         window.addEventListener('DOMContentLoaded', () => {
@@ -786,8 +787,15 @@
                     // Show success message
                     const errorDisplay = document.getElementById('errorDisplay');
                     errorDisplay.innerHTML = '<div class="success">✓ Pipeline imported successfully!</div>';
-                    setTimeout(() => {
+                    
+                    // Clear any existing timeout
+                    if (successMessageTimeout) {
+                        clearTimeout(successMessageTimeout);
+                    }
+                    
+                    successMessageTimeout = setTimeout(() => {
                         errorDisplay.innerHTML = '';
+                        successMessageTimeout = null;
                     }, 3000);
                     
                 } catch (error) {
