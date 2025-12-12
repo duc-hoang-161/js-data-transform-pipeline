@@ -420,6 +420,9 @@
                 <button class="btn btn-primary" onclick="addTransformation()">➕ Add Transformation</button>
                 <button class="btn btn-secondary" onclick="executeTransformation()">▶️ Execute</button>
                 <button class="btn btn-danger" onclick="resetAll()">🔄 Reset All</button>
+                <button class="btn btn-primary" onclick="exportPipeline()">💾 Export Pipeline</button>
+                <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">📂 Import Pipeline</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importPipeline(event)">
                 <div class="toggle-switch">
                     <label class="switch">
                         <input type="checkbox" id="liveMode" onchange="handleLiveModeToggle()">
@@ -460,7 +463,8 @@
             const transformation = {
                 id,
                 type: 'map',
-                code: 'return item;'
+                code: 'return item;',
+                enabled: true
             };
             transformations.push(transformation);
             renderTransformations();
@@ -516,6 +520,15 @@
             }
         }
 
+        function toggleTransformation(id) {
+            const transformation = transformations.find(t => t.id === id);
+            if (transformation) {
+                transformation.enabled = !transformation.enabled;
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
         function renderTransformations() {
             const pipeline = document.getElementById('pipeline');
             pipeline.innerHTML = '';
@@ -523,6 +536,10 @@
             transformations.forEach((t, index) => {
                 const div = document.createElement('div');
                 div.className = 'transformation';
+                if (!t.enabled) {
+                    div.style.opacity = '0.6';
+                    div.style.backgroundColor = '#f5f5f5';
+                }
                 
                 const placeholder = getPlaceholder(t.type);
                 const paramInfo = getParameterInfo(t.type);
@@ -531,7 +548,7 @@
                     <div class="transformation-header">
                         <div class="transformation-type">
                             <strong>Step ${index + 1}:</strong>
-                            <select onchange="updateTransformationType(${t.id}, this.value)">
+                            <select onchange="updateTransformationType(${t.id}, this.value)" ${!t.enabled ? 'disabled' : ''}>
                                 <option value="map" ${t.type === 'map' ? 'selected' : ''}>map</option>
                                 <option value="filter" ${t.type === 'filter' ? 'selected' : ''}>filter</option>
                                 <option value="reduce" ${t.type === 'reduce' ? 'selected' : ''}>reduce</option>
@@ -540,12 +557,19 @@
                                 <option value="custom" ${t.type === 'custom' ? 'selected' : ''}>custom</option>
                             </select>
                         </div>
-                        <button class="btn-remove" onclick="removeTransformation(${t.id})">✕ Remove</button>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label class="switch">
+                                <input type="checkbox" ${t.enabled ? 'checked' : ''} onchange="toggleTransformation(${t.id})">
+                                <span class="slider"></span>
+                            </label>
+                            <button class="btn-remove" onclick="removeTransformation(${t.id})">✕ Remove</button>
+                        </div>
                     </div>
                     <div style="margin-bottom: 8px; font-size: 13px; color: #666;">${paramInfo}</div>
                     <textarea class="code-editor" id="code-${t.id}" 
                         placeholder="${placeholder}"
-                        oninput="updateTransformationCode(${t.id}, this.value)">${t.code}</textarea>
+                        oninput="updateTransformationCode(${t.id}, this.value)"
+                        ${!t.enabled ? 'disabled' : ''}>${t.code}</textarea>
                 `;
                 
                 pipeline.appendChild(div);
@@ -603,6 +627,9 @@
 
                 // Apply transformations
                 transformations.forEach((t, index) => {
+                    // Skip disabled transformations
+                    if (!t.enabled) return;
+                    
                     try {
                         switch(t.type) {
                             case 'map':
@@ -695,6 +722,76 @@
             addTransformation();
         }
 
+        function exportPipeline() {
+            const pipeline = {
+                version: '1.0',
+                inputData: document.getElementById('inputData').value,
+                transformations: transformations.map(t => ({
+                    type: t.type,
+                    code: t.code,
+                    enabled: t.enabled
+                }))
+            };
+            
+            const dataStr = JSON.stringify(pipeline, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `pipeline-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function importPipeline(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const pipeline = JSON.parse(e.target.result);
+                    
+                    // Validate pipeline structure
+                    if (!pipeline.version || !pipeline.transformations) {
+                        throw new Error('Invalid pipeline file format');
+                    }
+                    
+                    // Load input data
+                    if (pipeline.inputData) {
+                        document.getElementById('inputData').value = pipeline.inputData;
+                    }
+                    
+                    // Load transformations
+                    transformations = pipeline.transformations.map((t, index) => ({
+                        id: Date.now() + index,
+                        type: t.type,
+                        code: t.code,
+                        enabled: t.enabled !== undefined ? t.enabled : true
+                    }));
+                    
+                    renderTransformations();
+                    
+                    // Show success message
+                    const errorDisplay = document.getElementById('errorDisplay');
+                    errorDisplay.innerHTML = '<div style="background: #d4edda; border: 2px solid #28a745; color: #155724; padding: 15px; border-radius: 8px; margin-top: 10px;">✓ Pipeline imported successfully!</div>';
+                    setTimeout(() => {
+                        errorDisplay.innerHTML = '';
+                    }, 3000);
+                    
+                } catch (error) {
+                    const errorDisplay = document.getElementById('errorDisplay');
+                    errorDisplay.innerHTML = `<div class="error">❌ Failed to import pipeline: ${error.message}</div>`;
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input so the same file can be imported again
+            event.target.value = '';
+        }
+
         function loadExample(type) {
             switch(type) {
                 case 'simple':
@@ -706,7 +803,8 @@
                     transformations = [{
                         id: Date.now(),
                         type: 'map',
-                        code: 'return { ...item, isAdult: item.age >= 18 };'
+                        code: 'return { ...item, isAdult: item.age >= 18 };',
+                        enabled: true
                     }];
                     break;
                     
@@ -720,12 +818,14 @@
                         {
                             id: Date.now(),
                             type: 'filter',
-                            code: 'return item.age >= 18;'
+                            code: 'return item.age >= 18;',
+                            enabled: true
                         },
                         {
                             id: Date.now() + 1,
                             type: 'map',
-                            code: 'return { name: item.name, city: item.city };'
+                            code: 'return { name: item.name, city: item.city };',
+                            enabled: true
                         }
                     ];
                     break;
@@ -739,7 +839,8 @@
                     transformations = [{
                         id: Date.now(),
                         type: 'reduce',
-                        code: 'return acc + (item.price * item.quantity);'
+                        code: 'return acc + (item.price * item.quantity);',
+                        enabled: true
                     }];
                     break;
                     
@@ -753,17 +854,20 @@
                         {
                             id: Date.now(),
                             type: 'map',
-                            code: 'const avg = item.scores.reduce((a, b) => a + b, 0) / item.scores.length;\nreturn { ...item, average: avg };'
+                            code: 'const avg = item.scores.reduce((a, b) => a + b, 0) / item.scores.length;\nreturn { ...item, average: avg };',
+                            enabled: true
                         },
                         {
                             id: Date.now() + 1,
                             type: 'filter',
-                            code: 'return item.average >= 85;'
+                            code: 'return item.average >= 85;',
+                            enabled: true
                         },
                         {
                             id: Date.now() + 2,
                             type: 'map',
-                            code: 'return { name: item.name, average: item.average.toFixed(2), grade: item.average >= 90 ? "A" : "B" };'
+                            code: 'return { name: item.name, average: item.average.toFixed(2), grade: item.average >= 90 ? "A" : "B" };',
+                            enabled: true
                         }
                     ];
                     break;
