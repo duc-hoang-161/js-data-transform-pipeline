@@ -302,6 +302,15 @@
             font-size: 13px;
         }
 
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
         .output-section {
             position: relative;
         }
@@ -421,7 +430,7 @@
                 <button class="btn btn-secondary" onclick="executeTransformation()">▶️ Execute</button>
                 <button class="btn btn-danger" onclick="resetAll()">🔄 Reset All</button>
                 <button class="btn btn-primary" onclick="exportPipeline()">💾 Export Pipeline</button>
-                <button class="btn btn-primary" onclick="document.getElementById('importFile').click()">📂 Import Pipeline</button>
+                <button class="btn btn-primary" onclick="document.getElementById('importFile').click()" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('importFile').click(); }">📂 Import Pipeline</button>
                 <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importPipeline(event)">
                 <div class="toggle-switch">
                     <label class="switch">
@@ -738,7 +747,7 @@
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `pipeline-${new Date().toISOString().slice(0, 10)}.json`;
+            link.download = `pipeline-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -766,7 +775,7 @@
                     
                     // Load transformations
                     transformations = pipeline.transformations.map((t, index) => ({
-                        id: Date.now() + index,
+                        id: Date.now() + index * 100, // Multiply by 100 to avoid collisions
                         type: t.type,
                         code: t.code,
                         enabled: t.enabled !== undefined ? t.enabled : true
@@ -776,7 +785,7 @@
                     
                     // Show success message
                     const errorDisplay = document.getElementById('errorDisplay');
-                    errorDisplay.innerHTML = '<div style="background: #d4edda; border: 2px solid #28a745; color: #155724; padding: 15px; border-radius: 8px; margin-top: 10px;">✓ Pipeline imported successfully!</div>';
+                    errorDisplay.innerHTML = '<div class="success">✓ Pipeline imported successfully!</div>';
                     setTimeout(() => {
                         errorDisplay.innerHTML = '';
                     }, 3000);
