@@ -380,6 +380,115 @@
             margin: 10px 0;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 6px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-move {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-move:hover {
+            background: #5568d3;
+        }
+
+        .btn-move:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .api-config-section {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .api-config-section textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -429,9 +538,9 @@
                 <button class="btn btn-primary" onclick="addTransformation()">➕ Add Transformation</button>
                 <button class="btn btn-secondary" onclick="executeTransformation()">▶️ Execute</button>
                 <button class="btn btn-danger" onclick="resetAll()">🔄 Reset All</button>
-                <button class="btn btn-primary" onclick="exportPipeline()">💾 Export Pipeline</button>
-                <button class="btn btn-primary" onclick="document.getElementById('importFile').click()" onkeydown="if(event.key === 'Enter' || event.key === 'Space') { event.preventDefault(); document.getElementById('importFile').click(); }">📂 Import Pipeline</button>
-                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importPipeline(event)">
+                <button class="btn btn-primary" onclick="showExportModal()">💾 Export Pipeline</button>
+                <button class="btn btn-primary" onclick="showImportModal()">📂 Import Pipeline</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importPipelineFromFile(event)">
                 <div class="toggle-switch">
                     <label class="switch">
                         <input type="checkbox" id="liveMode" onchange="handleLiveModeToggle()">
@@ -451,10 +560,56 @@
         </div>
     </div>
 
+    <!-- Export Options Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Export Pipeline Options</div>
+            <div class="modal-body">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="includeInputData" checked>
+                    <label for="includeInputData">Include input data</label>
+                </div>
+                <div style="font-size: 13px; color: #666; margin-top: -5px; margin-bottom: 15px; margin-left: 28px;">
+                    When unchecked, only transformations and API config will be exported
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeExportModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmExport()">Export</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Options Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Import Data Source</div>
+            <div class="modal-body">
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="importFromFile()">📂 Import from File</button>
+                <button class="btn btn-secondary" style="width: 100%;" onclick="showApiConfig()">🌐 Import from API</button>
+                
+                <div id="apiConfigSection" class="api-config-section" style="display: none;">
+                    <div style="margin-bottom: 10px; font-weight: 600;">Write your fetch function:</div>
+                    <textarea id="apiFetchCode" placeholder="// Example:
+async function fetchData() {
+  const response = await fetch('https://api.example.com/data');
+  const data = await response.json();
+  return data; // Must return an array
+}"></textarea>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="executeApiFetch()">Fetch Data</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeImportModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let transformations = [];
         let liveMode = false;
         let successMessageTimeout = null;
+        let apiFetchConfig = null; // Store API fetch configuration
 
         // Initialize application
         window.addEventListener('DOMContentLoaded', () => {
@@ -566,6 +721,8 @@
                                 <option value="flatMap" ${t.type === 'flatMap' ? 'selected' : ''}>flatMap</option>
                                 <option value="custom" ${t.type === 'custom' ? 'selected' : ''}>custom</option>
                             </select>
+                            <button class="btn-move" onclick="moveTransformationUp(${t.id})" ${index === 0 ? 'disabled' : ''}>▲</button>
+                            <button class="btn-move" onclick="moveTransformationDown(${t.id})" ${index === transformations.length - 1 ? 'disabled' : ''}>▼</button>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <label class="switch">
@@ -732,16 +889,34 @@
             addTransformation();
         }
 
-        function exportPipeline() {
+        // Modal functions
+        function showExportModal() {
+            document.getElementById('exportModal').style.display = 'block';
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').style.display = 'none';
+        }
+
+        function confirmExport() {
+            const includeInputData = document.getElementById('includeInputData').checked;
+            
             const pipeline = {
-                version: '1.0',
-                inputData: document.getElementById('inputData').value,
+                version: '1.1',
                 transformations: transformations.map(t => ({
                     type: t.type,
                     code: t.code,
                     enabled: t.enabled
                 }))
             };
+            
+            if (includeInputData) {
+                pipeline.inputData = document.getElementById('inputData').value;
+            }
+            
+            if (apiFetchConfig) {
+                pipeline.apiFetchConfig = apiFetchConfig;
+            }
             
             const dataStr = JSON.stringify(pipeline, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -753,9 +928,93 @@
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
+            
+            closeExportModal();
         }
 
-        function importPipeline(event) {
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'block';
+            document.getElementById('apiConfigSection').style.display = 'none';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function importFromFile() {
+            closeImportModal();
+            document.getElementById('importFile').click();
+        }
+
+        function showApiConfig() {
+            document.getElementById('apiConfigSection').style.display = 'block';
+        }
+
+        async function executeApiFetch() {
+            const code = document.getElementById('apiFetchCode').value;
+            const errorDisplay = document.getElementById('errorDisplay');
+            
+            if (!code.trim()) {
+                errorDisplay.innerHTML = '<div class="error">❌ Please enter a fetch function</div>';
+                return;
+            }
+            
+            try {
+                // Store the API configuration
+                apiFetchConfig = code;
+                
+                // Execute the fetch function
+                const fetchFunction = new Function('fetch', `
+                    return (async function() {
+                        ${code}
+                        return await fetchData();
+                    })();
+                `);
+                
+                const data = await fetchFunction(fetch);
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Fetch function must return an array');
+                }
+                
+                document.getElementById('inputData').value = JSON.stringify(data, null, 2);
+                
+                closeImportModal();
+                
+                errorDisplay.innerHTML = '<div class="success">✓ Data fetched successfully from API!</div>';
+                if (successMessageTimeout) {
+                    clearTimeout(successMessageTimeout);
+                }
+                successMessageTimeout = setTimeout(() => {
+                    errorDisplay.innerHTML = '';
+                    successMessageTimeout = null;
+                }, 3000);
+                
+            } catch (error) {
+                errorDisplay.innerHTML = `<div class="error">❌ Fetch error: ${error.message}</div>`;
+            }
+        }
+
+        // Movement functions
+        function moveTransformationUp(id) {
+            const index = transformations.findIndex(t => t.id === id);
+            if (index > 0) {
+                [transformations[index], transformations[index - 1]] = [transformations[index - 1], transformations[index]];
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function moveTransformationDown(id) {
+            const index = transformations.findIndex(t => t.id === id);
+            if (index < transformations.length - 1) {
+                [transformations[index], transformations[index + 1]] = [transformations[index + 1], transformations[index]];
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function importPipelineFromFile(event) {
             const file = event.target.files[0];
             if (!file) return;
             
@@ -772,6 +1031,12 @@
                     // Load input data
                     if (pipeline.inputData) {
                         document.getElementById('inputData').value = pipeline.inputData;
+                    }
+                    
+                    // Load API fetch config
+                    if (pipeline.apiFetchConfig) {
+                        apiFetchConfig = pipeline.apiFetchConfig;
+                        document.getElementById('apiFetchCode').value = apiFetchConfig;
                     }
                     
                     // Load transformations
