@@ -606,10 +606,12 @@ async function fetchData() {
     </div>
 
     <script>
+        const PIPELINE_VERSION = '1.1'; // Current pipeline format version
         let transformations = [];
         let liveMode = false;
         let successMessageTimeout = null;
-        let apiFetchConfig = null; // Store API fetch configuration
+        let apiFetchConfig = null; // Store user-defined fetch function code as string for API configuration
+        let idCounter = 0; // Counter for generating unique IDs
 
         // Initialize application
         window.addEventListener('DOMContentLoaded', () => {
@@ -640,7 +642,7 @@ async function fetchData() {
         });
 
         function addTransformation() {
-            const id = Date.now();
+            const id = Date.now() + (idCounter++); // Use counter to avoid collisions
             const transformation = {
                 id,
                 type: 'map',
@@ -927,7 +929,7 @@ async function fetchData() {
             const includeInputData = document.getElementById('includeInputData').checked;
             
             const pipeline = {
-                version: '1.1',
+                version: PIPELINE_VERSION,
                 transformations: transformations.map(t => ({
                     type: t.type,
                     code: t.code,
@@ -1083,8 +1085,9 @@ async function fetchData() {
                     }
                     
                     // Load transformations
+                    const baseId = Date.now();
                     transformations = pipeline.transformations.map((t, index) => ({
-                        id: Date.now() + index * 100, // Multiply by 100 to avoid collisions
+                        id: baseId + (idCounter++), // Use counter to ensure unique IDs
                         type: t.type,
                         code: t.code,
                         enabled: t.enabled !== undefined ? t.enabled : true
@@ -1126,7 +1129,7 @@ async function fetchData() {
                         {name: "Charlie", age: 35}
                     ], null, 2);
                     transformations = [{
-                        id: Date.now(),
+                        id: Date.now() + (idCounter++),
                         type: 'map',
                         code: 'return { ...item, isAdult: item.age >= 18 };',
                         enabled: true
@@ -1141,13 +1144,13 @@ async function fetchData() {
                     ], null, 2);
                     transformations = [
                         {
-                            id: Date.now(),
+                            id: Date.now() + (idCounter++),
                             type: 'filter',
                             code: 'return item.age >= 18;',
                             enabled: true
                         },
                         {
-                            id: Date.now() + 1,
+                            id: Date.now() + (idCounter++),
                             type: 'map',
                             code: 'return { name: item.name, city: item.city };',
                             enabled: true
@@ -1162,7 +1165,7 @@ async function fetchData() {
                         {product: "Orange", price: 2.0, quantity: 2}
                     ], null, 2);
                     transformations = [{
-                        id: Date.now(),
+                        id: Date.now() + (idCounter++),
                         type: 'reduce',
                         code: 'return acc + (item.price * item.quantity);',
                         enabled: true
@@ -1177,19 +1180,19 @@ async function fetchData() {
                     ], null, 2);
                     transformations = [
                         {
-                            id: Date.now(),
+                            id: Date.now() + (idCounter++),
                             type: 'map',
                             code: 'const avg = item.scores.reduce((a, b) => a + b, 0) / item.scores.length;\nreturn { ...item, average: avg };',
                             enabled: true
                         },
                         {
-                            id: Date.now() + 1,
+                            id: Date.now() + (idCounter++),
                             type: 'filter',
                             code: 'return item.average >= 85;',
                             enabled: true
                         },
                         {
-                            id: Date.now() + 2,
+                            id: Date.now() + (idCounter++),
                             type: 'map',
                             code: 'return { name: item.name, average: item.average.toFixed(2), grade: item.average >= 90 ? "A" : "B" };',
                             enabled: true
