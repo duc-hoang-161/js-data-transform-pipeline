@@ -561,9 +561,9 @@
     </div>
 
     <!-- Export Options Modal -->
-    <div id="exportModal" class="modal">
+    <div id="exportModal" class="modal" role="dialog" aria-labelledby="exportModalTitle" aria-hidden="true">
         <div class="modal-content">
-            <div class="modal-header">Export Pipeline Options</div>
+            <div class="modal-header" id="exportModalTitle">Export Pipeline Options</div>
             <div class="modal-body">
                 <div class="checkbox-group">
                     <input type="checkbox" id="includeInputData" checked>
@@ -581,9 +581,9 @@
     </div>
 
     <!-- Import Options Modal -->
-    <div id="importModal" class="modal">
+    <div id="importModal" class="modal" role="dialog" aria-labelledby="importModalTitle" aria-hidden="true">
         <div class="modal-content">
-            <div class="modal-header">Import Data Source</div>
+            <div class="modal-header" id="importModalTitle">Import Data Source</div>
             <div class="modal-body">
                 <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="importFromFile()">📂 Import from File</button>
                 <button class="btn btn-secondary" style="width: 100%;" onclick="showApiConfig()">🌐 Import from API</button>
@@ -620,6 +620,22 @@ async function fetchData() {
             // Add input listener for live mode
             document.getElementById('inputData').addEventListener('input', () => {
                 if (liveMode) executeTransformation();
+            });
+            
+            // Add keyboard event listeners for modal closing
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeExportModal();
+                    closeImportModal();
+                }
+            });
+            
+            // Close modals when clicking outside
+            document.getElementById('exportModal').addEventListener('click', (e) => {
+                if (e.target.id === 'exportModal') closeExportModal();
+            });
+            document.getElementById('importModal').addEventListener('click', (e) => {
+                if (e.target.id === 'importModal') closeImportModal();
             });
         });
 
@@ -891,11 +907,20 @@ async function fetchData() {
 
         // Modal functions
         function showExportModal() {
-            document.getElementById('exportModal').style.display = 'block';
+            const modal = document.getElementById('exportModal');
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            // Focus on first interactive element
+            setTimeout(() => {
+                const firstInput = modal.querySelector('input, button');
+                if (firstInput) firstInput.focus();
+            }, 100);
         }
 
         function closeExportModal() {
-            document.getElementById('exportModal').style.display = 'none';
+            const modal = document.getElementById('exportModal');
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
         }
 
         function confirmExport() {
@@ -933,12 +958,21 @@ async function fetchData() {
         }
 
         function showImportModal() {
-            document.getElementById('importModal').style.display = 'block';
+            const modal = document.getElementById('importModal');
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
             document.getElementById('apiConfigSection').style.display = 'none';
+            // Focus on first button
+            setTimeout(() => {
+                const firstButton = modal.querySelector('button');
+                if (firstButton) firstButton.focus();
+            }, 100);
         }
 
         function closeImportModal() {
-            document.getElementById('importModal').style.display = 'none';
+            const modal = document.getElementById('importModal');
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
         }
 
         function importFromFile() {
@@ -947,7 +981,13 @@ async function fetchData() {
         }
 
         function showApiConfig() {
-            document.getElementById('apiConfigSection').style.display = 'block';
+            const section = document.getElementById('apiConfigSection');
+            section.style.display = 'block';
+            // Focus on textarea for better UX
+            setTimeout(() => {
+                const textarea = document.getElementById('apiFetchCode');
+                if (textarea) textarea.focus();
+            }, 100);
         }
 
         async function executeApiFetch() {
@@ -963,6 +1003,9 @@ async function fetchData() {
                 // Store the API configuration
                 apiFetchConfig = code;
                 
+                // SECURITY NOTE: This uses Function constructor to allow users to write custom fetch code.
+                // This is intentional for flexibility but means users can execute arbitrary JavaScript.
+                // Only use this tool with trusted code. Do not execute pipelines from untrusted sources.
                 // Execute the fetch function
                 const fetchFunction = new Function('fetch', `
                     return (async function() {
