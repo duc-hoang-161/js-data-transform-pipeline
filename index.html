@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS Data Transform Pipeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #48bb78;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .transformation {
+            background: #f7fafc;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .transformation:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .transformation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .transformation-type {
+            display: flex;
+            gap: 10px;
+        }
+
+        .transformation-type select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+        }
+
+        .transformation-type select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-remove {
+            background: #f56565;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-remove:hover {
+            background: #e53e3e;
+        }
+
+        .code-editor {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            resize: vertical;
+        }
+
+        .code-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .preview-section {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .preview-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .preview-content {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .error {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .output-section {
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 40px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .copy-btn.copied {
+            background: #48bb78;
+        }
+
+        .examples {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .examples-title {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .example-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .example-btn {
+            padding: 8px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .example-btn:hover {
+            border-color: #667eea;
+            background: #f0f4f8;
+        }
+
+        .flow-indicator {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 6px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-move {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-move:hover {
+            background: #5568d3;
+        }
+
+        .btn-move:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .api-config-section {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .api-config-section textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔄 JS Data Transform Pipeline</h1>
+            <p class="subtitle">Visualize and transform JSON data with custom JavaScript</p>
+        </header>
+
+        <div class="examples">
+            <div class="examples-title">📋 Quick Examples</div>
+            <div class="example-buttons">
+                <button class="example-btn" onclick="loadExample('simple')">Simple Map</button>
+                <button class="example-btn" onclick="loadExample('filter')">Filter & Map</button>
+                <button class="example-btn" onclick="loadExample('reduce')">Reduce Sum</button>
+                <button class="example-btn" onclick="loadExample('complex')">Complex Chain</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">📥 Input Data <span class="badge">JSON Array</span></div>
+            <textarea id="inputData" rows="8" placeholder='Enter JSON array, e.g., [{"name": "Alice", "age": 25}, {"name": "Bob", "age": 30}]'></textarea>
+        </div>
+
+        <div class="section">
+            <div class="section-title">⚙️ Transformations</div>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="addTransformation()">➕ Add Transformation</button>
+                <button class="btn btn-secondary" onclick="executeTransformation()">▶️ Execute</button>
+                <button class="btn btn-danger" onclick="resetAll()">🔄 Reset All</button>
+                <button class="btn btn-primary" onclick="showExportModal()">💾 Export Pipeline</button>
+                <button class="btn btn-primary" onclick="showImportModal()">📂 Import Pipeline</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importPipelineFromFile(event)">
+                <div class="toggle-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="liveMode" onchange="handleLiveModeToggle()">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="liveMode" style="cursor: pointer; font-weight: 500;">Live Mode</label>
+                </div>
+            </div>
+            <div id="pipeline" class="pipeline"></div>
+        </div>
+
+        <div class="section output-section">
+            <div class="section-title">📤 Output <span class="badge">Formatted JSON</span></div>
+            <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy</button>
+            <textarea id="outputData" rows="12" readonly></textarea>
+            <div id="errorDisplay"></div>
+        </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="exportModal" class="modal" role="dialog" aria-labelledby="exportModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header" id="exportModalTitle">Export Pipeline Options</div>
+            <div class="modal-body">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="includeInputData" checked>
+                    <label for="includeInputData">Include input data</label>
+                </div>
+                <div style="font-size: 13px; color: #666; margin-top: -5px; margin-bottom: 15px; margin-left: 28px;">
+                    When unchecked, only transformations and API config will be exported
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeExportModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmExport()">Export</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Options Modal -->
+    <div id="importModal" class="modal" role="dialog" aria-labelledby="importModalTitle" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header" id="importModalTitle">Import Data Source</div>
+            <div class="modal-body">
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="importFromFile()">📂 Import from File</button>
+                <button class="btn btn-secondary" style="width: 100%;" onclick="showApiConfig()">🌐 Import from API</button>
+                
+                <div id="apiConfigSection" class="api-config-section" style="display: none;">
+                    <div style="margin-bottom: 10px; font-weight: 600;">Write your fetch function:</div>
+                    <textarea id="apiFetchCode" placeholder="// Example:
+async function fetchData() {
+  const response = await fetch('https://api.example.com/data');
+  const data = await response.json();
+  return data; // Must return an array
+}"></textarea>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="executeApiFetch()">Fetch Data</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeImportModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PIPELINE_VERSION = '1.1'; // Current pipeline format version
+        let transformations = [];
+        let liveMode = false;
+        let successMessageTimeout = null;
+        let apiFetchConfig = null; // Store user-defined fetch function code as string for API configuration
+        let idCounter = 0; // Counter for generating unique IDs
+
+        // Initialize application
+        window.addEventListener('DOMContentLoaded', () => {
+            // Add one initial transformation
+            addTransformation();
+            loadExample('simple');
+            
+            // Add input listener for live mode
+            document.getElementById('inputData').addEventListener('input', () => {
+                if (liveMode) executeTransformation();
+            });
+            
+            // Add keyboard event listeners for modal closing
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeExportModal();
+                    closeImportModal();
+                }
+            });
+            
+            // Close modals when clicking outside
+            document.getElementById('exportModal').addEventListener('click', (e) => {
+                if (e.target.id === 'exportModal') closeExportModal();
+            });
+            document.getElementById('importModal').addEventListener('click', (e) => {
+                if (e.target.id === 'importModal') closeImportModal();
+            });
+        });
+
+        function addTransformation() {
+            const id = Date.now() + (idCounter++); // Use counter to avoid collisions
+            const transformation = {
+                id,
+                type: 'map',
+                code: 'return item;',
+                enabled: true
+            };
+            transformations.push(transformation);
+            renderTransformations();
+        }
+
+        function removeTransformation(id) {
+            transformations = transformations.filter(t => t.id !== id);
+            renderTransformations();
+            if (liveMode) executeTransformation();
+        }
+
+        function updateTransformationType(id, type) {
+            const transformation = transformations.find(t => t.id === id);
+            if (transformation) {
+                transformation.type = type;
+                
+                // Update placeholder code based on type
+                const codeTextarea = document.querySelector(`#code-${id}`);
+                if (codeTextarea) {
+                    switch(type) {
+                        case 'map':
+                            transformation.code = 'return item;';
+                            break;
+                        case 'filter':
+                            transformation.code = 'return true;';
+                            break;
+                        case 'reduce':
+                            transformation.code = 'return acc;';
+                            break;
+                        case 'forEach':
+                            transformation.code = '// Perform side effects';
+                            break;
+                        case 'flatMap':
+                            transformation.code = 'return [item];';
+                            break;
+                        case 'custom':
+                            transformation.code = 'return data;';
+                            break;
+                    }
+                    codeTextarea.value = transformation.code;
+                }
+                
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function updateTransformationCode(id, code) {
+            const transformation = transformations.find(t => t.id === id);
+            if (transformation) {
+                transformation.code = code;
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function toggleTransformation(id) {
+            const transformation = transformations.find(t => t.id === id);
+            if (transformation) {
+                transformation.enabled = !transformation.enabled;
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function renderTransformations() {
+            const pipeline = document.getElementById('pipeline');
+            pipeline.innerHTML = '';
+
+            transformations.forEach((t, index) => {
+                const div = document.createElement('div');
+                div.className = 'transformation';
+                if (!t.enabled) {
+                    div.style.opacity = '0.6';
+                    div.style.backgroundColor = '#f5f5f5';
+                }
+                
+                const placeholder = getPlaceholder(t.type);
+                const paramInfo = getParameterInfo(t.type);
+                
+                div.innerHTML = `
+                    <div class="transformation-header">
+                        <div class="transformation-type">
+                            <strong>Step ${index + 1}:</strong>
+                            <select onchange="updateTransformationType(${t.id}, this.value)" ${!t.enabled ? 'disabled' : ''}>
+                                <option value="map" ${t.type === 'map' ? 'selected' : ''}>map</option>
+                                <option value="filter" ${t.type === 'filter' ? 'selected' : ''}>filter</option>
+                                <option value="reduce" ${t.type === 'reduce' ? 'selected' : ''}>reduce</option>
+                                <option value="forEach" ${t.type === 'forEach' ? 'selected' : ''}>forEach</option>
+                                <option value="flatMap" ${t.type === 'flatMap' ? 'selected' : ''}>flatMap</option>
+                                <option value="custom" ${t.type === 'custom' ? 'selected' : ''}>custom</option>
+                            </select>
+                            <button class="btn-move" onclick="moveTransformationUp(${t.id})" ${index === 0 ? 'disabled' : ''}>▲</button>
+                            <button class="btn-move" onclick="moveTransformationDown(${t.id})" ${index === transformations.length - 1 ? 'disabled' : ''}>▼</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <label class="switch">
+                                <input type="checkbox" ${t.enabled ? 'checked' : ''} onchange="toggleTransformation(${t.id})">
+                                <span class="slider"></span>
+                            </label>
+                            <button class="btn-remove" onclick="removeTransformation(${t.id})">✕ Remove</button>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 8px; font-size: 13px; color: #666;">${paramInfo}</div>
+                    <textarea class="code-editor" id="code-${t.id}" 
+                        placeholder="${placeholder}"
+                        oninput="updateTransformationCode(${t.id}, this.value)"
+                        ${!t.enabled ? 'disabled' : ''}>${t.code}</textarea>
+                `;
+                
+                pipeline.appendChild(div);
+                
+                if (index < transformations.length - 1) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'flow-indicator';
+                    indicator.textContent = '⬇';
+                    pipeline.appendChild(indicator);
+                }
+            });
+        }
+
+        function getPlaceholder(type) {
+            const placeholders = {
+                map: 'return { ...item, newField: item.oldField };',
+                filter: 'return item.value > 10;',
+                reduce: 'return acc + item.value;',
+                forEach: 'console.log(item);',
+                flatMap: 'return [item, item];',
+                custom: 'return data.slice(0, 5);'
+            };
+            return placeholders[type] || '';
+        }
+
+        function getParameterInfo(type) {
+            const info = {
+                map: 'Parameters: (item, index, array) => newItem',
+                filter: 'Parameters: (item, index, array) => boolean',
+                reduce: 'Parameters: (accumulator, item, index, array) => accumulator',
+                forEach: 'Parameters: (item, index, array) => void',
+                flatMap: 'Parameters: (item, index, array) => array',
+                custom: 'Parameters: (data) => transformed data (full array access)'
+            };
+            return info[type] || '';
+        }
+
+        function executeTransformation() {
+            const errorDisplay = document.getElementById('errorDisplay');
+            const outputData = document.getElementById('outputData');
+            errorDisplay.innerHTML = '';
+
+            try {
+                // Parse input data
+                const inputText = document.getElementById('inputData').value.trim();
+                if (!inputText) {
+                    throw new Error('Input data is empty');
+                }
+
+                let data = JSON.parse(inputText);
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Input must be a JSON array');
+                }
+
+                // Apply transformations
+                transformations.forEach((t, index) => {
+                    // Skip disabled transformations
+                    if (!t.enabled) return;
+                    
+                    try {
+                        switch(t.type) {
+                            case 'map':
+                                const mapFn = new Function('item', 'index', 'array', t.code);
+                                data = data.map(mapFn);
+                                break;
+                            case 'filter':
+                                const filterFn = new Function('item', 'index', 'array', t.code);
+                                data = data.filter(filterFn);
+                                break;
+                            case 'reduce':
+                                const reduceFn = new Function('acc', 'item', 'index', 'array', t.code);
+                                // Provide initial value for reduce - default to 0 (most common for sum/count)
+                                // Users can modify the code to use a different initial value if needed
+                                if (data.length === 0) {
+                                    data = 0;
+                                } else {
+                                    data = data.reduce(reduceFn, 0);
+                                }
+                                break;
+                            case 'forEach':
+                                const forEachFn = new Function('item', 'index', 'array', t.code);
+                                data.forEach(forEachFn);
+                                break;
+                            case 'flatMap':
+                                const flatMapFn = new Function('item', 'index', 'array', t.code);
+                                data = data.flatMap(flatMapFn);
+                                break;
+                            case 'custom':
+                                const customFn = new Function('data', t.code);
+                                data = customFn(data);
+                                break;
+                        }
+                    } catch (err) {
+                        throw new Error(`Error in Step ${index + 1} (${t.type}): ${err.message}`);
+                    }
+                });
+
+                // Format and display output
+                outputData.value = JSON.stringify(data, null, 2);
+            } catch (error) {
+                errorDisplay.innerHTML = `<div class="error">❌ ${error.message}</div>`;
+                outputData.value = '';
+            }
+        }
+
+        function handleLiveModeToggle() {
+            liveMode = document.getElementById('liveMode').checked;
+            if (liveMode) {
+                executeTransformation();
+            }
+        }
+
+        async function copyToClipboard() {
+            const outputData = document.getElementById('outputData');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            try {
+                // Use modern Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(outputData.value);
+                } else {
+                    // Fallback for older browsers
+                    outputData.select();
+                    document.execCommand('copy');
+                }
+                
+                copyBtn.textContent = '✓ Copied!';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                copyBtn.textContent = '❌ Failed';
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                }, 2000);
+            }
+        }
+
+        function resetAll() {
+            transformations = [];
+            document.getElementById('inputData').value = '';
+            document.getElementById('outputData').value = '';
+            document.getElementById('errorDisplay').innerHTML = '';
+            document.getElementById('liveMode').checked = false;
+            liveMode = false;
+            addTransformation();
+        }
+
+        // Modal functions
+        function showExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            // Focus on first interactive element
+            setTimeout(() => {
+                const firstInput = modal.querySelector('input, button');
+                if (firstInput) firstInput.focus();
+            }, 100);
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('exportModal');
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function confirmExport() {
+            const includeInputData = document.getElementById('includeInputData').checked;
+            
+            const pipeline = {
+                version: PIPELINE_VERSION,
+                transformations: transformations.map(t => ({
+                    type: t.type,
+                    code: t.code,
+                    enabled: t.enabled
+                }))
+            };
+            
+            if (includeInputData) {
+                pipeline.inputData = document.getElementById('inputData').value;
+            }
+            
+            if (apiFetchConfig) {
+                pipeline.apiFetchConfig = apiFetchConfig;
+            }
+            
+            const dataStr = JSON.stringify(pipeline, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `pipeline-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            closeExportModal();
+        }
+
+        function showImportModal() {
+            const modal = document.getElementById('importModal');
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            document.getElementById('apiConfigSection').style.display = 'none';
+            // Focus on first button
+            setTimeout(() => {
+                const firstButton = modal.querySelector('button');
+                if (firstButton) firstButton.focus();
+            }, 100);
+        }
+
+        function closeImportModal() {
+            const modal = document.getElementById('importModal');
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function importFromFile() {
+            closeImportModal();
+            document.getElementById('importFile').click();
+        }
+
+        function showApiConfig() {
+            const section = document.getElementById('apiConfigSection');
+            section.style.display = 'block';
+            // Focus on textarea for better UX
+            setTimeout(() => {
+                const textarea = document.getElementById('apiFetchCode');
+                if (textarea) textarea.focus();
+            }, 100);
+        }
+
+        async function executeApiFetch() {
+            const code = document.getElementById('apiFetchCode').value;
+            const errorDisplay = document.getElementById('errorDisplay');
+            
+            if (!code.trim()) {
+                errorDisplay.innerHTML = '<div class="error">❌ Please enter a fetch function</div>';
+                return;
+            }
+            
+            try {
+                // Store the API configuration
+                apiFetchConfig = code;
+                
+                // SECURITY NOTE: This uses Function constructor to allow users to write custom fetch code.
+                // This is intentional for flexibility but means users can execute arbitrary JavaScript.
+                // Only use this tool with trusted code. Do not execute pipelines from untrusted sources.
+                // Execute the fetch function
+                const fetchFunction = new Function('fetch', `
+                    return (async function() {
+                        ${code}
+                        return await fetchData();
+                    })();
+                `);
+                
+                const data = await fetchFunction(fetch);
+                
+                if (!Array.isArray(data)) {
+                    throw new Error('Fetch function must return an array');
+                }
+                
+                document.getElementById('inputData').value = JSON.stringify(data, null, 2);
+                
+                closeImportModal();
+                
+                errorDisplay.innerHTML = '<div class="success">✓ Data fetched successfully from API!</div>';
+                if (successMessageTimeout) {
+                    clearTimeout(successMessageTimeout);
+                }
+                successMessageTimeout = setTimeout(() => {
+                    errorDisplay.innerHTML = '';
+                    successMessageTimeout = null;
+                }, 3000);
+                
+            } catch (error) {
+                errorDisplay.innerHTML = `<div class="error">❌ Fetch error: ${error.message}</div>`;
+            }
+        }
+
+        // Movement functions
+        function moveTransformationUp(id) {
+            const index = transformations.findIndex(t => t.id === id);
+            if (index > 0) {
+                [transformations[index], transformations[index - 1]] = [transformations[index - 1], transformations[index]];
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function moveTransformationDown(id) {
+            const index = transformations.findIndex(t => t.id === id);
+            if (index < transformations.length - 1) {
+                [transformations[index], transformations[index + 1]] = [transformations[index + 1], transformations[index]];
+                renderTransformations();
+                if (liveMode) executeTransformation();
+            }
+        }
+
+        function importPipelineFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const pipeline = JSON.parse(e.target.result);
+                    
+                    // Validate pipeline structure
+                    if (!pipeline.version || !pipeline.transformations) {
+                        throw new Error('Invalid pipeline file format');
+                    }
+                    
+                    // Load input data
+                    if (pipeline.inputData) {
+                        document.getElementById('inputData').value = pipeline.inputData;
+                    }
+                    
+                    // Load API fetch config
+                    if (pipeline.apiFetchConfig) {
+                        apiFetchConfig = pipeline.apiFetchConfig;
+                        document.getElementById('apiFetchCode').value = apiFetchConfig;
+                    }
+                    
+                    // Load transformations
+                    const baseId = Date.now();
+                    transformations = pipeline.transformations.map((t, index) => ({
+                        id: baseId + (idCounter++), // Use counter to ensure unique IDs
+                        type: t.type,
+                        code: t.code,
+                        enabled: t.enabled !== undefined ? t.enabled : true
+                    }));
+                    
+                    renderTransformations();
+                    
+                    // Show success message
+                    const errorDisplay = document.getElementById('errorDisplay');
+                    errorDisplay.innerHTML = '<div class="success">✓ Pipeline imported successfully!</div>';
+                    
+                    // Clear any existing timeout
+                    if (successMessageTimeout) {
+                        clearTimeout(successMessageTimeout);
+                    }
+                    
+                    successMessageTimeout = setTimeout(() => {
+                        errorDisplay.innerHTML = '';
+                        successMessageTimeout = null;
+                    }, 3000);
+                    
+                } catch (error) {
+                    const errorDisplay = document.getElementById('errorDisplay');
+                    errorDisplay.innerHTML = `<div class="error">❌ Failed to import pipeline: ${error.message}</div>`;
+                }
+            };
+            reader.readAsText(file);
+            
+            // Reset file input so the same file can be imported again
+            event.target.value = '';
+        }
+
+        function loadExample(type) {
+            switch(type) {
+                case 'simple':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {name: "Alice", age: 25},
+                        {name: "Bob", age: 30},
+                        {name: "Charlie", age: 35}
+                    ], null, 2);
+                    transformations = [{
+                        id: Date.now() + (idCounter++),
+                        type: 'map',
+                        code: 'return { ...item, isAdult: item.age >= 18 };',
+                        enabled: true
+                    }];
+                    break;
+                    
+                case 'filter':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {name: "Alice", age: 25, city: "NYC"},
+                        {name: "Bob", age: 17, city: "LA"},
+                        {name: "Charlie", age: 35, city: "NYC"}
+                    ], null, 2);
+                    transformations = [
+                        {
+                            id: Date.now() + (idCounter++),
+                            type: 'filter',
+                            code: 'return item.age >= 18;',
+                            enabled: true
+                        },
+                        {
+                            id: Date.now() + (idCounter++),
+                            type: 'map',
+                            code: 'return { name: item.name, city: item.city };',
+                            enabled: true
+                        }
+                    ];
+                    break;
+                    
+                case 'reduce':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {product: "Apple", price: 1.5, quantity: 3},
+                        {product: "Banana", price: 0.8, quantity: 5},
+                        {product: "Orange", price: 2.0, quantity: 2}
+                    ], null, 2);
+                    transformations = [{
+                        id: Date.now() + (idCounter++),
+                        type: 'reduce',
+                        code: 'return acc + (item.price * item.quantity);',
+                        enabled: true
+                    }];
+                    break;
+                    
+                case 'complex':
+                    document.getElementById('inputData').value = JSON.stringify([
+                        {name: "Alice", scores: [85, 90, 92]},
+                        {name: "Bob", scores: [78, 82, 88]},
+                        {name: "Charlie", scores: [95, 93, 97]}
+                    ], null, 2);
+                    transformations = [
+                        {
+                            id: Date.now() + (idCounter++),
+                            type: 'map',
+                            code: 'const avg = item.scores.reduce((a, b) => a + b, 0) / item.scores.length;\nreturn { ...item, average: avg };',
+                            enabled: true
+                        },
+                        {
+                            id: Date.now() + (idCounter++),
+                            type: 'filter',
+                            code: 'return item.average >= 85;',
+                            enabled: true
+                        },
+                        {
+                            id: Date.now() + (idCounter++),
+                            type: 'map',
+                            code: 'return { name: item.name, average: item.average.toFixed(2), grade: item.average >= 90 ? "A" : "B" };',
+                            enabled: true
+                        }
+                    ];
+                    break;
+            }
+            
+            renderTransformations();
+            if (liveMode) {
+                executeTransformation();
+            }
+        }
+    </script>
+</body>
+</html>
